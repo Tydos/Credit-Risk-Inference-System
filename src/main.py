@@ -5,6 +5,7 @@ from src.loan_dataset import loan_dataset
 from src.model import loan_predictor
 from torch.optim import Adam
 import torch.nn as nn
+import os
 import torch
 from src.config_loader import load_config
 from src.test_model import dummy_test
@@ -55,7 +56,7 @@ optimizer = Adam(model.parameters(), lr=LEARNING_RATE,  weight_decay=WEIGHT_DECA
 print("model train")
 import mlflow
 import matplotlib.pyplot as plt
-mlflow.set_tracking_uri("http://54.236.35.141:5000/")
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://54.236.35.141:5000/"))
 mlflow.set_experiment("LoanPayback_Experiment")
 mlflow.pytorch.autolog()
 
