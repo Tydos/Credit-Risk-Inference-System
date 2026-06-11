@@ -1,60 +1,75 @@
-## Credit Risk Inference System
+# Credit Risk Inference System
 
-This project provides a FastAPI-based inference service for credit risk prediction. The service can be containerized and run using Docker.
+An end-to-end MLOps system for real-time credit risk classification, covering model training, experiment tracking, containerized deployment, and CI/CD automation on AWS.
 
-### Build and Run Docker Image
+---
 
-To build the Docker image, run:
+## What It Does
 
-```bash
-docker build -f api/inference.dockerfile -t inference .
+Predicts the probability that a borrower will default on a loan (binary classification). The system is designed for production use, with sub-500ms inference, automated model promotion, and a full local development stack.
+
+---
+
+## Architecture Overview
+
+```
+Training Pipeline → MLflow Registry → FastAPI Inference API → AWS EC2 (via ECR)
+     │                    │                   │
+  PyTorch NN          PostgreSQL           Docker
+  11 features           + S3               + IAM
 ```
 
-To run the image:
+**Stack:** PyTorch · FastAPI · MLflow · PostgreSQL · MinIO · Docker · GitHub Actions · AWS (EC2, ECR, S3, IAM)
 
-```bash
-docker run --env-file .env -p 8000:8000 -d inference
-```
+![endpoint](docs/predict-api.png)
+![mlflow](docs/mlflow.png)
+---
 
-Build and run Mlflow 
+## Model
 
+The model is a fully connected feedforward neural network built in PyTorch, trained on 11 engineered loan features for binary default classification. All experiments are tracked with MLflow, which stores run metadata in PostgreSQL and artifacts in S3. Promising runs are registered to the MLflow Model Registry and promoted to the `Production` stage, which the inference service uses to load the right model at startup.
+
+## Inference API
+
+The inference layer is a FastAPI service that pulls the current Production model from the registry at boot and serves real-time predictions over REST. The service is containerized with Docker and deployed to AWS EC2 via ECR. Under load testing with `wrk`, p99 latency measured at **450ms**.
+
+## CI/CD Pipeline
+
+Deployments are automated with a GitHub Actions workflow (`deploy.yaml`). On every push, the runner authenticates with AWS, builds and pushes a fresh Docker image to ECR, then SSHes into the EC2 instance and hot-swaps the running container — no manual steps required.
+
+## Local Development
+
+The full system runs locally via Docker Compose, spinning up Postgres, MinIO, MLflow, the training job, and the inference API together. Docker Compose is used instead of individual `docker run` commands because it handles passing AWS credentials into the containers and wiring up the connections to S3 and the Postgres metadata store.
+
+---
+
+## Running Locally
+
+**Start the full stack:**
 ```bash
 docker compose up
 ```
-Why Docker Compose instead of running docker images?
-- Allows passing AWS secrets into the container
-- Required for connecting to S3 (artifact storage) and PostgreSQL (metadata storage)
 
-### CI/CD on Github Actions
-The deploy.yaml workflow automates the deployment pipeline for the API to a hosted EC2 instance. It performs the following steps:
+**Build and run just the inference API:**
+```bash
+docker build -f api/inference.dockerfile -t inference .
+docker run --env-file .env -p 8000:8000 -d inference
+```
 
-1. AWS Authorization
-- Authorizes the GitHub Runner to access AWS
-- Required for pushing Docker images to ECS and deploying resources
+---
 
-2. Build & Push Docker Image
-- Builds the API Docker image
-- Pushes the image to Elastic Container Service (ECS)
+## AWS Deployment
 
-3. Deploy to EC2
-- Connects to the EC2 instance hosting the API
-- Boots the new API code, replacing the old version
+The EC2 instance runs with an IAM role scoped to least-privilege. The `mlflow_s3_access` custom policy restricts S3 access to the MLflow artifacts bucket only.
 
-This CI/CD setup ensures automated, secure, and consistent deployment of API updates.
+| Policy | Purpose |
+|---|---|
+| `AmazonEC2ContainerRegistryPullOnly` | Pull images from ECR |
+| `AmazonEC2ContainerRegistryReadOnly` | Read ECR metadata |
+| `mlflow_s3_access` (custom) | `s3:GetObject` + `s3:ListBucket` on MLflow artifact bucket |
 
-### AWS Deployment Notes
+---
 
-1. Create a IAM role with the following permissions
+## Future Work
 
-   
-| Policy / Role                        | Purpose                                                                 |
-| ------------------------------------ | ----------------------------------------------------------------------- |
-| `AmazonEC2ContainerRegistryPullOnly` | Pull images from ECR repositories                                       |
-| `AmazonEC2ContainerRegistryReadOnly` | Read ECR metadata and repository info                                   |
-| `mlflow_s3_access` (custom)          | Access MLFlow production models in S3 (`s3:GetObject`, `s3:ListBucket`) |
-
-### Future Ideas 
-
-1. Setup Canary/Blue-Green deployments of ML models
-2. Adding a auto scaling group for horizontal scaling of the servers
-3. Adding a load balancer server
+Planned improvements include canary/blue-green deployments for zero-downtime model updates, an Auto Scaling Group for horizontal scaling under load, and an Application Load Balancer in front of the EC2 fleet.
