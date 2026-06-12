@@ -1,6 +1,6 @@
 #data-split configuration
 data_split:
-  data_length: 1000
+  data_length: 500000
   target_column: loan_paid_back
 
   test_size_1: 0.3 #70:30 train test split
@@ -15,5 +15,9 @@ pytorch:
   learning_rate: 0.0001
   weight_decay: 0.00001
   model_input_dim: 11
+  hidden_layers: [64, 32, 16]
+  dropout: 0.1
 
-
+mlflow:
+  tracking_uri: http://localhost:5000
+  experiment_name: LoanPayback

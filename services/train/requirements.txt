@@ -1,0 +1,9 @@
+pandas
+scikit-learn
+pyyaml
+pydantic
+matplotlib
+tqdm
+mlflow
+boto3
+psutil

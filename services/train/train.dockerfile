@@ -11,19 +11,13 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-    
-RUN pip install --no-cache-dir \
-    pandas \
-    scikit-learn \
-    pyyaml \
-    pydantic \
-    matplotlib \
-    tqdm \
-    mlflow \
-    boto3
+COPY services/train/requirements.txt .
 
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY services/train/ .
 COPY src/ src/
 
-CMD ["python", "-m", "src.main"]
+CMD ["python", "main.py"]

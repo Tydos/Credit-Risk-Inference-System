@@ -1,21 +1,16 @@
 import torch.nn as nn
 
+
 class loan_predictor(nn.Module):
-    def __init__(self,num_features):
+    def __init__(self, num_features: int, hidden_layers: list, dropout: float):
         super().__init__()
-        self.model = nn.Sequential(
-            nn.Linear(num_features,64),
-            nn.ReLU(),
-            nn.Linear(64,52),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(52,28),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(28,10),
-            nn.ReLU(),
-            nn.Linear(10,1)
-        )
-        
-    def forward(self,x):
-        return self.model(x);
+        layers = []
+        in_dim = num_features
+        for out_dim in hidden_layers:
+            layers += [nn.Linear(in_dim, out_dim), nn.ReLU(), nn.Dropout(dropout)]
+            in_dim = out_dim
+        layers.append(nn.Linear(in_dim, 1))
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.model(x)

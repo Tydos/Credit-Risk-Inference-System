@@ -1,35 +1,38 @@
+import logging
 import torch
-import torch.nn as nn
-from src.model import loan_predictor
 from src.schema import validate_payload
-import mlflow.pytorch
 
-def predictloan(model,request: validate_payload = None):
+
+def predictloan(model, request: validate_payload = None):
     if request is None:
-        inputs = torch.tensor(data=[-1.0334,  2.9195, -0.3585, -0.3576, -0.3022,  1.0000,  1.0000,  0.0000,
-            0.0000,  4.0000, 17.0000])
+        inputs = torch.tensor(
+            data=[
+                -1.0334,
+                2.9195,
+                -0.3585,
+                -0.3576,
+                -0.3022,
+                1.0000,
+                1.0000,
+                0.0000,
+                0.0000,
+                4.0000,
+                17.0000,
+            ]
+        )
     else:
         input_features = request.request
-        inputs = torch.tensor(input_features,dtype=torch.float32)
+        inputs = torch.tensor(input_features, dtype=torch.float32)
 
-    # model = loan_predictor(11)
-
-    #Switch to a production model using MLFLow instead of hardcoding 
-    # model.load_state_dict(torch.load("Models\V1.pt"))
-    # Load the production model from MLflow
-    # model_uri = "models:/LoanPayback/Production"  # MLflow model registry stage
-    # model = mlflow.pytorch.load_model(model_uri)
-    
     model.eval()
 
     with torch.no_grad():
         outputs = model(inputs)
 
-    # print(outputs)
     probs = torch.sigmoid(outputs)
     preds = (probs >= 0.5).float()
-    # print(int(preds))
+    logging.info(
+        f"Predicted probabilities: {probs.item()}, Predicted class: {preds.item()}"
+    )
 
     return int(preds)
-
-# print(predictloan())

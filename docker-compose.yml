@@ -9,7 +9,6 @@ x-env: &env
   MLFLOW_S3_ENDPOINT_URL: http://minio:9000
 
 services:
-
   # metadata storage for MLflow
   postgres:
     image: postgres:16-alpine
@@ -55,11 +54,11 @@ services:
       exit 0"
     restart: "no"
 
-  # MLflow tracking server 
+  # MLflow tracking server
   mlflow:
     build:
       context: .
-      dockerfile: mlflow-server/mlflow.dockerfile
+      dockerfile: services/mlflow-server/mlflow.dockerfile
     environment:
       <<: *env
     ports:
@@ -73,7 +72,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\"",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:5000/health'')"',
         ]
       interval: 10s
       timeout: 5s
@@ -91,7 +90,7 @@ services:
   train:
     build:
       context: .
-      dockerfile: src/train.dockerfile
+      dockerfile: services/train/train.dockerfile
     environment:
       <<: *env
       MLFLOW_TRACKING_URI: http://mlflow:5000
@@ -107,7 +106,7 @@ services:
   inference:
     build:
       context: .
-      dockerfile: api/inference.dockerfile
+      dockerfile: services/inference/inference.dockerfile
     environment:
       <<: *env
       MLFLOW_TRACKING_URI: http://mlflow:5000
